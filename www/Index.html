@@ -1,0 +1,589 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hora do Remédio</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f1f5f9;
+  color: #243247;
+}
+
+header {
+  background: #287c70;
+  color: white;
+  padding: 30px 15px;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 30px;
+  margin: 0 0 10px;
+}
+
+header p {
+  font-size: 18px;
+  margin: 0;
+}
+
+main {
+  max-width: 550px;
+  margin: auto;
+  padding: 18px;
+}
+
+.card {
+  background: white;
+  padding: 22px;
+  border-radius: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 3px 12px #00000010;
+}
+
+h2 {
+  font-size: 24px;
+  margin-top: 0;
+}
+
+label {
+  display: block;
+  font-size: 19px;
+  font-weight: bold;
+  margin: 17px 0 8px;
+}
+
+input {
+  width: 100%;
+  padding: 15px;
+  font-size: 19px;
+  border: 2px solid #d5dfdf;
+  border-radius: 10px;
+  background: white;
+}
+
+button {
+  width: 100%;
+  padding: 17px;
+  border: none;
+  border-radius: 12px;
+  font-size: 19px;
+  font-weight: bold;
+  margin-top: 14px;
+  cursor: pointer;
+}
+
+.add {
+  background: #287c70;
+  color: white;
+}
+
+.permission {
+  background: #e1f0ec;
+  color: #205d53;
+}
+
+.test {
+  background: #e9efff;
+  color: #3455a0;
+}
+
+.medicine {
+  border: 2px solid #e2e9e8;
+  padding: 17px;
+  border-radius: 14px;
+  margin: 14px 0;
+}
+
+.medicine strong {
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+
+.medicine p {
+  font-size: 19px;
+}
+
+.taken {
+  background: #287c70;
+  color: white;
+}
+
+.delete {
+  background: #fbe8e8;
+  color: #a32e2e;
+}
+
+.empty {
+  text-align: center;
+  color: #657477;
+  font-size: 19px;
+}
+
+.info {
+  font-size: 16px;
+  color: #687777;
+  line-height: 1.5;
+}
+
+.counter {
+  background: #e1f0ec;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 18px;
+  text-align: center;
+  margin-bottom: 15px;
+  color: #205d53;
+  font-weight: bold;
+}
+
+#alarm {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #173f3b;
+  color: white;
+  z-index: 10;
+  padding: 25px;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+#alarm h1 {
+  font-size: 38px;
+}
+
+#alarm p {
+  font-size: 24px;
+}
+
+#alarmNames {
+  font-size: 25px;
+  font-weight: bold;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+#alarm button {
+  max-width: 350px;
+  background: white;
+  color: #205d53;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>💊 Hora do Remédio</h1>
+  <p>Seus medicamentos na hora certa!</p>
+</header>
+
+<main>
+
+<section class="card">
+
+<h2>➕ Cadastrar medicamento</h2>
+
+<label>Nome do medicamento</label>
+<input id="name" type="text" placeholder="Ex: Losartana">
+
+<label>Horário</label>
+<input id="time" type="time">
+
+<button class="add" onclick="addMedicine()">
+SALVAR MEDICAMENTO
+</button>
+
+<button class="permission" onclick="enableNotifications()">
+🔔 ATIVAR NOTIFICAÇÕES
+</button>
+
+<button class="test" onclick="testVoice()">
+🔊 TESTAR VOZ
+</button>
+
+<p class="info">
+Cadastre todos os medicamentos e seus respectivos horários.
+Os lembretes serão repetidos diariamente.
+</p>
+
+</section>
+
+<section class="card">
+
+<h2>📋 Meus medicamentos</h2>
+
+<div class="counter" id="counter">
+0 medicamentos cadastrados
+</div>
+
+<div id="medicines"></div>
+
+</section>
+
+</main>
+
+<div id="alarm">
+
+<div style="font-size:80px">🔔💊</div>
+
+<h1>HORA DO REMÉDIO!</h1>
+
+<div id="alarmNames"></div>
+
+<p>Está na hora de tomar seus medicamentos!</p>
+
+<button onclick="stopAlarm()">
+JÁ VI O AVISO
+</button>
+
+</div>
+
+<script>
+
+// ARMAZENAMENTO
+
+let medicines = [];
+
+try {
+  medicines = JSON.parse(
+    localStorage.getItem("medicines") || "[]"
+  );
+} catch(e) {
+  medicines = [];
+}
+
+let speakInterval = null;
+let activeAlarm = false;
+
+// SALVAR
+
+function save() {
+  localStorage.setItem(
+    "medicines",
+    JSON.stringify(medicines)
+  );
+}
+
+// DATA ATUAL
+
+function today() {
+  const d = new Date();
+
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0")
+  ].join("-");
+}
+
+// MOSTRAR MEDICAMENTOS
+
+function render() {
+
+  const container = document.getElementById("medicines");
+  const counter = document.getElementById("counter");
+
+  counter.textContent =
+    medicines.length +
+    (medicines.length === 1
+      ? " medicamento cadastrado"
+      : " medicamentos cadastrados");
+
+  container.innerHTML = "";
+
+  if (medicines.length === 0) {
+    container.innerHTML =
+      '<p class="empty">Nenhum medicamento cadastrado.</p>';
+    return;
+  }
+
+  medicines.forEach((med, index) => {
+
+    const div = document.createElement("div");
+    div.className = "medicine";
+
+    const title = document.createElement("strong");
+    title.textContent = "💊 " + med.name;
+
+    const time = document.createElement("p");
+    time.textContent = "⏰ Horário: " + med.time;
+
+    const status = document.createElement("p");
+    status.textContent = med.done
+      ? "✅ Tomado hoje"
+      : "⏳ Pendente";
+
+    const button = document.createElement("button");
+    button.className = "taken";
+    button.textContent = "JÁ TOMEI";
+    button.onclick = () => markTaken(index);
+
+    const remove = document.createElement("button");
+    remove.className = "delete";
+    remove.textContent = "EXCLUIR";
+    remove.onclick = () => deleteMedicine(index);
+
+    div.append(title, time, status, button, remove);
+    container.appendChild(div);
+
+  });
+}
+
+// CADASTRAR
+
+function addMedicine() {
+
+  const name = document.getElementById("name").value.trim();
+  const time = document.getElementById("time").value;
+
+  if (!name || !time) {
+    alert("Preencha o nome e o horário!");
+    return;
+  }
+
+  medicines.push({
+    name: name,
+    time: time,
+    done: false,
+    day: today(),
+    lastAlert: ""
+  });
+
+  save();
+  render();
+
+  document.getElementById("name").value = "";
+  document.getElementById("time").value = "";
+
+  alert("Medicamento cadastrado com sucesso!");
+}
+
+// MARCAR COMO TOMADO
+
+function markTaken(index) {
+
+  medicines[index].done = true;
+
+  save();
+  render();
+}
+
+// EXCLUIR
+
+function deleteMedicine(index) {
+
+  if (confirm("Deseja excluir este medicamento?")) {
+    medicines.splice(index, 1);
+    save();
+    render();
+  }
+
+}
+
+// NOTIFICAÇÕES
+
+async function enableNotifications() {
+
+  if (!("Notification" in window)) {
+    alert("Este navegador não suporta notificações.");
+    return;
+  }
+
+  try {
+
+    const permission =
+      await Notification.requestPermission();
+
+    if (permission === "granted") {
+      alert("Notificações ativadas!");
+    } else {
+      alert("Permissão não concedida.");
+    }
+
+  } catch(e) {
+    alert("Não foi possível ativar as notificações.");
+  }
+
+}
+
+// FALAR MEDICAMENTO
+
+function speakMedicine(name) {
+
+  if (!("speechSynthesis" in window)) {
+    alert("Seu dispositivo não suporta leitura por voz.");
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const message = new SpeechSynthesisUtterance(
+    "Atenção! Está na hora de tomar: " +
+    name +
+    ". Não esqueça seus medicamentos!"
+  );
+
+  message.lang = "pt-BR";
+  message.rate = 0.85;
+  message.pitch = 1;
+  message.volume = 1;
+
+  window.speechSynthesis.speak(message);
+
+}
+
+// TESTAR VOZ
+
+function testVoice() {
+  speakMedicine("medicamento de teste");
+}
+
+// INICIAR ALARME
+
+function startAlarm(names) {
+
+  if (activeAlarm) return;
+
+  activeAlarm = true;
+
+  document.getElementById("alarmNames").textContent =
+    names.join(", ");
+
+  document.getElementById("alarm").style.display = "flex";
+
+  if (navigator.vibrate) {
+    navigator.vibrate([700, 250, 700, 250, 700]);
+  }
+
+  const announcement = names.join(", ");
+
+  speakMedicine(announcement);
+
+  clearInterval(speakInterval);
+
+  speakInterval = setInterval(() => {
+
+    if (!activeAlarm) return;
+
+    if (!window.speechSynthesis.speaking) {
+      speakMedicine(announcement);
+    }
+
+  }, 12000);
+
+  if (
+    "Notification" in window &&
+    Notification.permission === "granted"
+  ) {
+    new Notification("HORA DO REMÉDIO! 💊", {
+      body: "Está na hora de tomar: " + announcement
+    });
+  }
+
+}
+
+// PARAR ALARME
+
+function stopAlarm() {
+
+  activeAlarm = false;
+
+  document.getElementById("alarm").style.display = "none";
+
+  clearInterval(speakInterval);
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  if (navigator.vibrate) {
+    navigator.vibrate(0);
+  }
+
+}
+
+// VERIFICAR HORÁRIOS
+
+function checkMedicines() {
+
+  const now = new Date();
+
+  const currentTime =
+    String(now.getHours()).padStart(2, "0") +
+    ":" +
+    String(now.getMinutes()).padStart(2, "0");
+
+  const currentDay = today();
+
+  let changed = false;
+
+  medicines.forEach((med) => {
+
+    if (med.day !== currentDay) {
+      med.done = false;
+      med.day = currentDay;
+      changed = true;
+    }
+
+  });
+
+  if (!activeAlarm) {
+
+    const dueMedicines = medicines.filter((med) => {
+
+      return (
+        med.time === currentTime &&
+        med.lastAlert !== currentDay &&
+        !med.done
+      );
+
+    });
+
+    if (dueMedicines.length > 0) {
+
+      const names = dueMedicines.map(med => med.name);
+
+      dueMedicines.forEach((med) => {
+        med.lastAlert = currentDay;
+      });
+
+      changed = true;
+
+      startAlarm(names);
+
+    }
+
+  }
+
+  if (changed) {
+    save();
+    render();
+  }
+
+}
+
+// INICIALIZAÇÃO
+
+render();
+
+checkMedicines();
+
+setInterval(checkMedicines, 5000);
+
+</script>
+
+</body>
+</html>
