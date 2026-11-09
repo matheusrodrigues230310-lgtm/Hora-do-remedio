@@ -1,0 +1,7 @@
+
+{
+  "appId": "com.matheus.horadoremedio",
+  "appName": "Hora do Remédio",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
